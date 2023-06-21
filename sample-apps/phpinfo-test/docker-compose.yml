@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  php.sample:
+    build:
+      context: ../../php7
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/www/html
+    environment:
+      - VIRTUAL_HOST=phpinfo.test
+      - NETWORK_ACCESS=internal
+
+networks:
+  default:
+    external: true
+    name: www-proxy-net

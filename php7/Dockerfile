@@ -9,7 +9,7 @@ ENV TZ=UTC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update \
-    && apt-get install -y gnupg gosu curl ca-certificates libzip-dev zip unzip git supervisor sqlite3 libcap2-bin libpng-dev python2 \
+    && apt-get install -y --no-install-recommends gnupg gosu curl ca-certificates libzip-dev zip unzip supervisor libcap2-bin libpng-dev python2 \
        libmemcached-dev zlib1g-dev libpq-dev libc-client-dev libkrb5-dev libxml2-dev libldap2-dev libpcre3-dev \
     && mkdir -p ~/.gnupg \
     && chmod 600 ~/.gnupg \
@@ -24,12 +24,12 @@ RUN apt-get update \
        igbinary redis xmlrpc \
     && php -r "readfile('https://getcomposer.org/installer');" | php -- --install-dir=/usr/bin/ --filename=composer \
     && curl -sLS https://deb.nodesource.com/setup_$NODE_VERSION.x | bash - \
-    && apt install -y nodejs \
-    && npm install -g npm \
+    && apt install -y --no-install-recommends nodejs \
+    && npm install -g --no-install-recommends npm \
     && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null \
     && echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \
     && apt-get update \
-    && apt-get install -y yarn \
+    && apt-get install -y --no-install-recommends yarn \
     && apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
