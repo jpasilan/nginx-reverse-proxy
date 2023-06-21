@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+if [ ! -z "$WWWUSER" ]; then
+    echo "Setting user ID: $WWWUSER"
+    usermod -u $WWWUSER www-user
+fi
+
+if [ ! -z "$WWWGROUP" ]; then
+    if [ -z $(getent group "$WWWGROUP") ]; then
+        groupadd -g $WWWGROUP www-user
+    fi
+    echo "Setting group ID: $WWWGROUP"
+    usermod -g $WWWGROUP www-user
+fi
+
+if [ ! -d /.composer ]; then
+    mkdir /.composer
+fi
+
+chmod -R ugo+rw /.composer
+
+if [ $# -gt 0 ]; then
+    exec gosu $WWWUSER "$@"
+else
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+fi
