@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+
+UNAMEOUT="$(uname -s)"
+
+# Verify operating system is supported...
+case "${UNAMEOUT}" in
+    Linux*)             MACHINE=linux;;
+    Darwin*)            MACHINE=mac;;
+    *)                  MACHINE="UNKNOWN"
+esac
+
+if [ "$MACHINE" == "UNKNOWN" ]; then
+    echo "Unsupported operating system [$(uname -s)]. Supports macOS, Linux, and Windows (WSL2)." >&2
+
+    exit 1
+fi
+
+# Determine if stdout is a terminal...
+if test -t 1; then
+    # Determine if colors are supported...
+    ncolors=$(tput colors)
+
+    if test -n "$ncolors" && test "$ncolors" -ge 8; then
+        BOLD="$(tput bold)"
+        YELLOW="$(tput setaf 3)"
+        GREEN="$(tput setaf 2)"
+        NC="$(tput sgr0)"
+    fi
+fi
+
+# Function that prints the available commands...
+function display_help {
+    echo "Docker App Helper"
+    echo
+    echo "${YELLOW}Usage:${NC}" >&2
+    echo "  docker-app COMMAND [options] [arguments]"
+    echo
+    echo "Unknown commands are passed to the docker-compose binary."
+    echo
+    echo "${YELLOW}docker-compose Commands:${NC}"
+    echo "  ${GREEN}docker-app up${NC}                 Start the application"
+    echo "  ${GREEN}docker-app up -d${NC}              Start the application in the background"
+    echo "  ${GREEN}docker-app stop${NC}               Stop the application"
+    echo "  ${GREEN}docker-app restart${NC}            Restart the application"
+    echo "  ${GREEN}docker-app ps${NC}                 Display the status of all containers"
+    echo "  ${GREEN}docker-app build --no-cache${NC}   Rebuild all of the containers"
+    echo
+    echo "${YELLOW}Artisan Commands:${NC}"
+    echo "  ${GREEN}docker-app artisan ...${NC}   Run an Artisan command"
+    echo
+    echo "${YELLOW}PHP Commands:${NC}"
+    echo "  ${GREEN}docker-app php ...${NC}   Run a snippet of PHP code"
+    echo "  ${GREEN}docker-app php -v${NC}"
+    echo
+    echo "${YELLOW}Composer Commands:${NC}"
+    echo "  ${GREEN}docker-app composer ...${NC}                        Run a Composer command"
+    echo "  ${GREEN}docker-app composer require laravel/sanctum${NC}"
+    echo
+    echo "${YELLOW}Node Commands:${NC}"
+    echo "  ${GREEN}docker-app node ...${NC}          Run a Node command"
+    echo "  ${GREEN}docker-app node --version${NC}"
+    echo
+    echo "${YELLOW}NPM Commands:${NC}"
+    echo "  ${GREEN}docker-app npm ...${NC}         Run a npm command"
+    echo "  ${GREEN}docker-app npx${NC}             Run a npx command"
+    echo "  ${GREEN}docker-app npm run prod${NC}"
+    echo
+    echo "${YELLOW}Container CLI:${NC}"
+    echo "  ${GREEN}docker-app shell${NC}        Start a shell session within the application container"
+    echo "  ${GREEN}docker-app bash${NC}         Alias for 'docker-app shell'"
+    echo "  ${GREEN}docker-app root-shell${NC}   Start a root shell session within the application container"
+    echo "  ${GREEN}docker-app root-bash${NC}    Alias for 'docker-app root-shell'"
+
+    exit 1
+}
+
+# Proxy the "help" command...
+if [ $# -gt 0 ]; then
+    if [ "$1" == "help" ] || [ "$1" == "-h" ] || [ "$1" == "-help" ] || [ "$1" == "--help" ]; then
+        display_help
+    fi
+else
+    display_help
+fi
+
+# Define environment variables...
+export WWWUSER=${WWWUSER:-$UID}
+export WWWGROUP=${WWWGROUP:-$(id -g)}
+
+function app_is_not_running {
+    echo "${BOLD}Docker app is not running.${NC}" >&2
+    echo "" >&2
+    echo "${BOLD}You may run using the following commands:${NC} '$0 up' or '$0 up -d'" >&2
+
+    exit 1
+}
+
+# Define Docker Compose command prefix...
+docker compose &> /dev/null
+if [ $? == 0 ]; then
+    DOCKER_COMPOSE=(docker compose)
+else
+    DOCKER_COMPOSE=(docker-compose)
+fi
+
+# Set APP_SERVICE environment variable.
+export APP_SERVICE=$("${DOCKER_COMPOSE[@]}" ps | awk 'NR>1 {print $4}')
+
+EXEC="yes"
+
+if [ -z "$INTERSECT_SKIP_CHECKS" ]; then
+    # Ensure that Docker is running...
+    if ! docker info > /dev/null 2>&1; then
+        echo "${BOLD}Docker is not running.${NC}" >&2
+
+        exit 1
+    fi
+
+    # Determine if Docker app is currently up...
+    if "${DOCKER_COMPOSE[@]}" ps "$APP_SERVICE" 2>&1 | grep 'Exit\|exited'; then
+        echo "${BOLD}Shutting down old processes...${NC}" >&2
+
+        "${DOCKER_COMPOSE[@]}" down > /dev/null 2>&1
+
+        EXEC="no"
+    elif [ -z "$APP_SERVICE" ]; then
+        EXEC="no"
+    fi
+fi
+
+ARGS=()
+
+# Proxy PHP commands to the "php" binary on the application container...
+if [ "$1" == "php" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" "php" "$@")
+    else
+        app_is_not_running
+    fi
+
+# Proxy docker-compose commands to the docker-compose binary on the application container...
+elif [ "$1" == "docker-compose" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" "${DOCKER_COMPOSE[@]}")
+    else
+        app_is_not_running
+    fi
+
+# Proxy Composer commands to the "composer" binary on the application container...
+elif [ "$1" == "composer" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" "composer" "$@")
+    else
+        app_is_not_running
+    fi
+
+# Proxy Artisan commands to the "artisan" binary on the application container...
+elif [ "$1" == "artisan" ] || [ "$1" == "art" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php artisan "$@")
+    else
+        app_is_not_running
+    fi
+
+# Proxy Node commands to the "node" binary on the application container...
+elif [ "$1" == "node" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" node "$@")
+    else
+        app_is_not_running
+    fi
+
+# Proxy NPM commands to the "npm" binary on the application container...
+elif [ "$1" == "npm" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" npm "$@")
+    else
+        app_is_not_running
+    fi
+
+# Proxy NPX commands to the "npx" binary on the application container...
+elif [ "$1" == "npx" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" npx "$@")
+    else
+        app_is_not_running
+    fi
+
+# Initiate a Bash shell within the application container...
+elif [ "$1" == "shell" ] || [ "$1" == "bash" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec -u www-user)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" bash "$@")
+    else
+        app_is_not_running
+    fi
+
+# Initiate a root user Bash shell within the application container...
+elif [ "$1" == "root-shell" ] || [ "$1" == "root-bash" ]; then
+    if [ "$EXEC" == "yes" ]; then
+        shift 1
+
+        ARGS+=(exec)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" bash "$@")
+    else
+        app_is_not_running
+    fi
+
+# Pass unknown commands to the "docker-compose" binary...
+else
+    ARGS+=("$@")
+fi
+
+# Run Docker Compose with the defined arguments...
+"${DOCKER_COMPOSE[@]}" "${ARGS[@]}"

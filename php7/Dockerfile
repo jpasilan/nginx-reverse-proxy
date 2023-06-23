@@ -1,6 +1,7 @@
-FROM php:7.4-bullseye
+FROM php:7.4-fpm-buster
 
 ARG NODE_VERSION=16
+
 WORKDIR /var/www/html
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -9,46 +10,60 @@ ENV TZ=UTC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gnupg gosu curl ca-certificates libzip-dev zip unzip supervisor libcap2-bin libpng-dev python2 \
-       libmemcached-dev zlib1g-dev libpq-dev libc-client-dev libkrb5-dev libxml2-dev libldap2-dev libpcre3-dev \
-    && mkdir -p ~/.gnupg \
-    && chmod 600 ~/.gnupg \
-    && echo "disable-ipv6" >> ~/.gnupg/dirmngr.conf \
+    && apt-get install -y --no-install-recommends gnupg2 gosu curl ca-certificates libzip-dev zip unzip \
+       supervisor libcap2-bin libpng-dev libmemcached-dev zlib1g-dev libpq-dev libc-client-dev \
+       libkrb5-dev libxml2-dev libldap2-dev libpcre3-dev apt-transport-https \
     && pecl install memcached pcov msgpack igbinary redis \
     && docker-php-ext-install gd json opcache \
-       pdo \
-       zip bcmath soap intl xmlrpc \
+       pdo zip bcmath soap intl xmlrpc \
     && docker-php-ext-enable gd memcached opcache \
-       pdo \
-       zip bcmath soap intl pcov msgpack \
+       pdo zip bcmath soap intl pcov msgpack \
        igbinary redis xmlrpc \
     && php -r "readfile('https://getcomposer.org/installer');" | php -- --install-dir=/usr/bin/ --filename=composer \
     && curl -sLS https://deb.nodesource.com/setup_$NODE_VERSION.x | bash - \
     && apt install -y --no-install-recommends nodejs \
     && npm install -g --no-install-recommends npm \
-    && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null \
-    && echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \
+    && apt install -y --no-install-recommends nginx
+
+# Install MSSQL extension
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends yarn \
-    && apt-get -y autoremove \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
+
+RUN pear config-set php_ini `php --ini | grep "Loaded Configuration" | sed -e "s|.*:\s*||"` system \
+    && pecl install sqlsrv-5.10.1 \
+    && pecl install pdo_sqlsrv-5.10.1 \
+    && docker-php-ext-enable sqlsrv.so \
+    && docker-php-ext-enable pdo_sqlsrv.so
+
+# Clean up
+RUN apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Allow non-root users access to privileged ports.
-RUN setcap "cap_net_bind_service=+ep" /usr/local/bin/php
-
-RUN id www-user || useradd -ms /bin/bash --no-user-group -u 1337 www-user
-
 ENV COMPOSER_HOME=/.composer
-RUN mkdir /.composer \
-    && chmod ugo+rw /.composer
-COPY composer/config.json /.composer/config.json
+RUN mkdir /.composer && chmod ugo+rw /.composer
+COPY common/composer/config.json /.composer/config.json
 
-COPY start-container /usr/local/bin/start-container
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY php.ini /etc/php/7.4/cli/conf.d/99-laravel.ini
+RUN groupadd --force -g 1337 www-user
+RUN useradd -ms /bin/bash --no-user-group -g www-user -u 1337 www-user
+
+# PHP related configurations
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY common/php-conf/php.ini "$PHP_INI_DIR/conf.d/99-www-user.ini"
+# For php-fpm, overwrite zz-docker.conf instead of www.conf
+COPY common/php-conf/zz-docker.conf /usr/local/etc/php-fpm.d/zz-docker.conf
+
+# nginx related configurations
+COPY common/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY common/nginx/nginx-default.conf /etc/nginx/sites-available/default
+
+COPY common/start-container /usr/local/bin/start-container
+COPY common/php-conf/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN chmod +x /usr/local/bin/start-container
 
 EXPOSE 80
 
 ENTRYPOINT ["start-container"]
+
