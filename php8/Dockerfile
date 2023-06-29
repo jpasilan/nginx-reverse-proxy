@@ -1,4 +1,4 @@
-FROM php:7.4-fpm-buster
+FROM php:8.2-fpm-bullseye
 
 ARG NODE_VERSION=16
 
@@ -13,22 +13,21 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gnupg2 gosu curl ca-certificates libzip-dev zip unzip \
        supervisor libcap2-bin libpng-dev libmemcached-dev zlib1g-dev libpq-dev libc-client-dev \
        libkrb5-dev libxml2-dev libldap2-dev libpcre3-dev apt-transport-https \
-    && pecl install memcached pcov msgpack igbinary redis \
-    && docker-php-ext-install gd json opcache \
-       pdo zip bcmath soap intl xmlrpc \
-    && docker-php-ext-enable gd memcached opcache \
-       pdo zip bcmath soap intl pcov msgpack \
-       igbinary redis xmlrpc \
+    && pecl install memcached pcov msgpack igbinary redis xmlrpc-1.0.0RC3 \
+    && docker-php-ext-install gd opcache zip bcmath soap intl \
+    && docker-php-ext-enable gd memcached opcache zip bcmath \
+       soap intl pcov msgpack igbinary redis xmlrpc.so 
 
 # Install MSSQL extension
+# Getting the source from Ubuntu instead of Debian since there seems to be an issue in the latter.
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 unixodbc-dev
 
 RUN pear config-set php_ini `php --ini | grep "Loaded Configuration" | sed -e "s|.*:\s*||"` system \
-    && pecl install sqlsrv-5.10.1 \
-    && pecl install pdo_sqlsrv-5.10.1 \
+    && pecl install sqlsrv \
+    && pecl install pdo_sqlsrv \
     && docker-php-ext-enable sqlsrv.so \
     && docker-php-ext-enable pdo_sqlsrv.so
 
