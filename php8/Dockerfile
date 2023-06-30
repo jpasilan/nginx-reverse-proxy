@@ -16,7 +16,7 @@ RUN apt-get update \
     && pecl install memcached pcov msgpack igbinary redis xmlrpc-1.0.0RC3 \
     && docker-php-ext-install gd opcache zip bcmath soap intl \
     && docker-php-ext-enable gd memcached opcache zip bcmath \
-       soap intl pcov msgpack igbinary redis xmlrpc.so 
+       soap intl pcov msgpack igbinary redis xmlrpc.so
 
 # Install MSSQL extension
 # Getting the source from Ubuntu instead of Debian since there seems to be an issue in the latter.

@@ -18,7 +18,7 @@ RUN apt-get update \
        pdo zip bcmath soap intl xmlrpc \
     && docker-php-ext-enable gd memcached opcache \
        pdo zip bcmath soap intl pcov msgpack \
-       igbinary redis xmlrpc \
+       igbinary redis xmlrpc
 
 # Install MSSQL extension
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
