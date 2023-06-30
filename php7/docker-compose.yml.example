@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  php7.test:
+    build:
+      context: ../
+      dockerfile: ./php7/Dockerfile
+    image: proxyapp/php7.4
+    restart: always
+    volumes:
+      - .:/var/www/html
+    environment:
+      - WWWUSER=${WWWUSER}
+      - WWWGROUP=${WWWGROUP}
+      - VIRTUAL_HOST=php7.test
+      - NETWORK_ACCESS=internal
+
+networks:
+  default:
+    external: true
+    name: www-proxy-net
+

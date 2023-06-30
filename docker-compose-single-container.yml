@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  nginx.proxy:
+    image: jwilder/nginx-proxy:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/vhost.d:/etc/nginx/vhost.d
+      - ./nginx/custom.conf.d/custom.conf:/etc/nginx/conf.d/custom.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+networks:
+  default:
+    external: true
+    name: www-proxy-net
+

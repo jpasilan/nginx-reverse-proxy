@@ -1,19 +1,42 @@
 version: '3.8'
 
 services:
-  nginx.proxy:
-    image: jwilder/nginx-proxy:alpine
+  nginx:
+    build:
+      context: ./
+      dockerfile: ./nginx/Dockerfile
+    image: proxyapp/nginx
+    container_name: proxyapp-nginx
     restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - nginx-conf:/etc/nginx/conf.d
+      - nginx-dhparam:/etc/nginx/dhparam
       - ./nginx/vhost.d:/etc/nginx/vhost.d
-      - ./nginx/conf.d/custom.conf:/etc/nginx/conf.d/custom.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
+
+  dockergen:
+    image: nginxproxy/docker-gen
+    container_name: proxyapp-dockergen
+    restart: always
+    command: -notify-sighup proxyapp-nginx -watch /etc/docker-gen/templates/nginx.tmpl
+      /etc/nginx/conf.d/default.conf
+    volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl
+      - nginx-conf:/etc/nginx/conf.d
+      - nginx-dhparam:/etc/nginx/dhparam
+      - ./nginx/vhost.d:/etc/nginx/vhost.d
+      - ./nginx/certs:/etc/nginx/certs:ro
+
+volumes:
+  nginx-conf:
+  nginx-dhparam:
 
 networks:
   default:
     external: true
     name: www-proxy-net
+
