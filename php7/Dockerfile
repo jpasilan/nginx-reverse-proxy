@@ -1,6 +1,6 @@
 FROM php:7.4-fpm-buster
 
-ARG NODE_VERSION=16
+ARG NODE_VERSION=18
 
 WORKDIR /var/www/html
 
@@ -33,10 +33,14 @@ RUN pear config-set php_ini `php --ini | grep "Loaded Configuration" | sed -e "s
     && docker-php-ext-enable pdo_sqlsrv.so
 
 # Install other software packages then clean up.
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" \
+      | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt install -y --no-install-recommends nodejs
+
 RUN php -r "readfile('https://getcomposer.org/installer');" | php -- --install-dir=/usr/bin/ --filename=composer \
-    && curl -sLS https://deb.nodesource.com/setup_$NODE_VERSION.x | bash - \
-    && apt install -y --no-install-recommends nodejs \
-    && npm install -g --no-install-recommends npm \
     && apt install -y --no-install-recommends nginx \
     && apt-get -y autoremove \
     && apt-get clean \
