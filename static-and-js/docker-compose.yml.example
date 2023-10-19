@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  static.test:
+    build:
+      context: ../
+      dockerfile: ./static-and-js/Dockerfile
+    image: proxyapp/static-and-js
+    restart: always
+    volumes:
+      - .:/var/www/html
+    environment:
+      - WWWUSER=${WWWUSER}
+      - WWWGROUP=${WWWGROUP}
+      - VIRTUAL_HOST=static.test
+      - NETWORK_ACCESS=internal
+
+networks:
+  default:
+    external: true
+    name: www-proxy-net
+
+
