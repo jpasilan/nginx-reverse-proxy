@@ -5,7 +5,7 @@ services:
     build:
       context: ../
       dockerfile: ./php5-ssl/Dockerfile
-    image: proxyapp/php5.6
+    image: proxyapp/php5.6-ssl
     restart: always
     volumes:
       - .:/var/www/html
