@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  php5.test:
+    build:
+      context: ../
+      dockerfile: ./php5-ssl/Dockerfile
+    image: proxyapp/php5.6
+    restart: always
+    volumes:
+      - .:/var/www/html
+      - ./certs:/etc/nginx/certs:ro
+    environment:
+      - WWWUSER=${WWWUSER}
+      - WWWGROUP=${WWWGROUP}
+      - VIRTUAL_HOST=php5.test
+      - NETWORK_ACCESS=internal
+      - VIRTUAL_PROTO=https
+      - VIRTUAL_PORT=443
+
+networks:
+  default:
+    external: true
+    name: www-proxy-net
+
