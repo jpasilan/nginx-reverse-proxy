@@ -14,9 +14,9 @@ RUN apt-get update \
        supervisor libcap2-bin libpng-dev libmemcached-dev zlib1g-dev libpq-dev libc-client-dev \
        libkrb5-dev libxml2-dev libldap2-dev libpcre3-dev apt-transport-https \
     && pecl install memcached pcov msgpack igbinary redis \
-    && docker-php-ext-install gd json opcache \
+    && docker-php-ext-install gd json opcache ldap \
        pdo zip bcmath soap intl xmlrpc \
-    && docker-php-ext-enable gd memcached opcache \
+    && docker-php-ext-enable gd memcached opcache ldap \
        pdo zip bcmath soap intl pcov msgpack \
        igbinary redis xmlrpc
 

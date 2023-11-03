@@ -26,9 +26,10 @@ RUN dpkg -L freetds-dev | grep libsybdb.a | xargs -i ln -s {} /usr/lib
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions @fix_letsencrypt \
     && pecl install memcached-2.2.0 msgpack-0.5.7 igbinary-2.0.8 redis-2.2.8 \
-    && docker-php-ext-install gd json opcache \
+    && docker-php-ext-configure ldap --with-libdir=lib/x86_64-linux-gnu/ \
+    && docker-php-ext-install gd json opcache ldap \
        pdo pdo_dblib mssql zip bcmath soap intl xmlrpc \
-    && docker-php-ext-enable gd opcache \
+    && docker-php-ext-enable gd opcache ldap \
        pdo pdo_dblib mssql zip bcmath soap intl xmlrpc \
        memcached.so msgpack.so igbinary.so redis.so
 

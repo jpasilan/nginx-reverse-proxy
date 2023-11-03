@@ -14,8 +14,8 @@ RUN apt-get update \
        supervisor libcap2-bin libpng-dev libmemcached-dev zlib1g-dev libpq-dev libc-client-dev \
        libkrb5-dev libxml2-dev libldap2-dev libpcre3-dev apt-transport-https \
     && pecl install memcached pcov msgpack igbinary redis xmlrpc-1.0.0RC3 \
-    && docker-php-ext-install gd opcache zip bcmath soap intl \
-    && docker-php-ext-enable gd memcached opcache zip bcmath \
+    && docker-php-ext-install gd opcache zip bcmath soap intl ldap \
+    && docker-php-ext-enable gd memcached opcache zip bcmath ldap \
        soap intl pcov msgpack igbinary redis xmlrpc.so
 
 # Install MSSQL extension
