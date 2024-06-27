@@ -436,9 +436,9 @@ server {
                 {{- end }}
         {{- end }}
         {{- if $fallback_https }}
-    listen {{ $globals.external_https_port }} ssl http2; {{- /* Do not add `default_server` (see comment above). */}}
+    listen {{ $globals.external_https_port }} ssl; {{- /* Do not add `default_server` (see comment above). */}}
             {{- if $globals.enable_ipv6 }}
-    listen [::]:{{ $globals.external_https_port }} ssl http2; {{- /* Do not add `default_server` (see comment above). */}}
+    listen [::]:{{ $globals.external_https_port }} ssl; {{- /* Do not add `default_server` (see comment above). */}}
             {{- end }}
     ssl_session_cache shared:SSL:50m;
     ssl_session_tickets off;
@@ -556,9 +556,9 @@ server {
         {{- end }}
     {{- end }}
     {{- if ne $https_method "nohttps" }}
-    listen {{ $globals.external_https_port }} ssl http2 {{ $default_server }};
+    listen {{ $globals.external_https_port }} ssl {{ $default_server }};
         {{- if $globals.enable_ipv6 }}
-    listen [::]:{{ $globals.external_https_port }} ssl http2 {{ $default_server }};
+    listen [::]:{{ $globals.external_https_port }} ssl {{ $default_server }};
         {{- end }}
 
         {{- if $cert_ok }}

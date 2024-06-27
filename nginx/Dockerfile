@@ -1,4 +1,4 @@
-FROM nginx:1.25.0-alpine
+FROM nginx:1.27-alpine-slim
 
 # Install dependencies
 RUN apk add --no-cache --virtual .run-deps bash ca-certificates openssl \
